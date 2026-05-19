@@ -769,9 +769,15 @@ def fix_file(filepath: str) -> None:
     else:
         print("  No changes needed — tags already complete.")
 
-    # ── Move to destination folder ───────────────────────────────────────────
-    os.makedirs(DEST_FOLDER, exist_ok=True)
-    dest_path = os.path.join(DEST_FOLDER, os.path.basename(filepath))
+    # ── Move to destination folder / artist subfolder ───────────────────────
+    # Use albumartist for the folder name (already cleaned: no "Various Artists",
+    # group rules applied). Fall back to artist if albumartist is still empty.
+    folder_artist = tag("albumartist") or tag("artist") or "Unknown Artist"
+    # Sanitize: strip characters that are invalid in folder names
+    safe_artist = re.sub(r'[\\/:*?"<>|]', "_", folder_artist).strip()
+    artist_folder = os.path.join(DEST_FOLDER, safe_artist)
+    os.makedirs(artist_folder, exist_ok=True)
+    dest_path = os.path.join(artist_folder, os.path.basename(filepath))
     if os.path.abspath(filepath) != os.path.abspath(dest_path):
         shutil.move(filepath, dest_path)
         print(f"  Moved to: {dest_path}")
