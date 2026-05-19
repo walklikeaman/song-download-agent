@@ -136,13 +136,25 @@ The script reads existing FLAC tags, reports audio quality, strips watermarks, c
 
 ### Output folder
 
-Every processed file is automatically moved to:
+Every processed file is automatically moved to `~/Downloads/Spotify downloads/`. The folder is created if it doesn't exist.
+
+**Artist subfolders** are created only when a batch contains **2 or more songs by the same artist**. A single song goes flat into the root:
 
 ```
+# One Radiohead + one Fink → flat
 ~/Downloads/Spotify downloads/
+  Radiohead - Airbag.flac
+  Fink - Wishing For Blue Sky.flac
+
+# Two Radiohead + one Fink → Radiohead gets a subfolder, Fink stays flat
+~/Downloads/Spotify downloads/
+  Radiohead/
+    Radiohead - Airbag.flac
+    Radiohead - Karma Police.flac
+  Fink - Wishing For Blue Sky.flac
 ```
 
-The folder is created automatically if it doesn't exist. Files already in that folder are not moved (no-op).
+The script pre-scans all files before processing and announces at the start which artists will get subfolders. Folder names use the `albumartist` tag (already cleaned — no "Various Artists"). Characters invalid on macOS/Windows are replaced with `_`.
 
 ### Quality report
 
@@ -530,6 +542,7 @@ Tags written by this agent (Vorbis Comment / FLAC format):
 | 2026-05-19 | Genre enforcement: never blank. Chain: existing → iTunes → artist cache → MusicBrainz. Cache persists in artist_genres.json. |
 | 2026-05-19 | Various Artists rule: albumartist "Various Artists" always replaced with track artist. |
 | 2026-05-19 | Artist grouping: artist_groups.json maps artists to shared ARTISTSORT/ALBUMARTISTSORT for iTunes grouping without changing display names. |
+| 2026-05-19 | Artist subfolders created only when batch has 2+ songs by the same artist. Single songs stay flat in Spotify downloads/. |
 
 ---
 
