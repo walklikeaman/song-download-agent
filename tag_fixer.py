@@ -600,7 +600,7 @@ def check_quality(audio: FLAC) -> tuple[str, bool]:
 
 # ── Core tagger ───────────────────────────────────────────────────────────────
 
-def fix_file(filepath: str) -> None:
+def fix_file(filepath: str, multi_artists: set | None = None) -> None:
     print(f"\n{'─'*60}")
     print(f"  File : {os.path.basename(filepath)}")
 
@@ -769,15 +769,16 @@ def fix_file(filepath: str) -> None:
     else:
         print("  No changes needed — tags already complete.")
 
-    # ── Move to destination folder / artist subfolder ───────────────────────
-    # Use albumartist for the folder name (already cleaned: no "Various Artists",
-    # group rules applied). Fall back to artist if albumartist is still empty.
+    # ── Move to destination folder ───────────────────────────────────────────
     folder_artist = tag("albumartist") or tag("artist") or "Unknown Artist"
-    # Sanitize: strip characters that are invalid in folder names
-    safe_artist = re.sub(r'[\\/:*?"<>|]', "_", folder_artist).strip()
-    artist_folder = os.path.join(DEST_FOLDER, safe_artist)
-    os.makedirs(artist_folder, exist_ok=True)
-    dest_path = os.path.join(artist_folder, os.path.basename(filepath))
+    safe_artist   = re.sub(r'[\\/:*?"<>|]', "_", folder_artist).strip()
+    # Only create an artist subfolder when the batch has 2+ songs by this artist
+    if multi_artists and safe_artist in multi_artists:
+        dest_dir = os.path.join(DEST_FOLDER, safe_artist)
+    else:
+        dest_dir = DEST_FOLDER
+    os.makedirs(dest_dir, exist_ok=True)
+    dest_path = os.path.join(dest_dir, os.path.basename(filepath))
     if os.path.abspath(filepath) != os.path.abspath(dest_path):
         shutil.move(filepath, dest_path)
         print(f"  Moved to: {dest_path}")
@@ -796,10 +797,30 @@ def main():
         print("No valid files found.")
         sys.exit(1)
 
+    # Pre-scan: read raw albumartist/artist tags to decide which artists
+    # appear more than once — only those get a subfolder.
+    from collections import Counter
+
+    def _raw_artist(path: str) -> str:
+        try:
+            f = FLAC(path)
+            aa = (f.get("albumartist") or f.get("ALBUMARTIST") or [""])[0].strip()
+            a  = (f.get("artist")      or f.get("ARTIST")      or [""])[0].strip()
+            name = aa if aa and not _VARIOUS.match(aa) else a
+            return re.sub(r'[\\/:*?"<>|]', "_", name).strip() or "Unknown Artist"
+        except Exception:
+            return "Unknown Artist"
+
+    counts       = Counter(_raw_artist(f) for f in flac_files)
+    multi_artists = {artist for artist, n in counts.items() if n >= 2}
+
     print(f"Processing {len(flac_files)} file(s)...")
+    if multi_artists:
+        print(f"  Subfolders will be created for: {', '.join(sorted(multi_artists))}")
+
     for f in flac_files:
         try:
-            fix_file(f)
+            fix_file(f, multi_artists)
         except KeyboardInterrupt:
             print("\nAborted.")
             sys.exit(0)
