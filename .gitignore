@@ -1,0 +1,18 @@
+# Audio files — never commit actual music
+*.flac
+*.mp3
+*.m4a
+*.wav
+*.aiff
+*.ogg
+
+# Auto-generated cache — contains personal artist data, excluded by default
+artist_genres.json
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
