@@ -556,6 +556,7 @@ Tags written by this agent (Vorbis Comment / FLAC format):
 | 2026-05-21 | Created `song-download` skill: full download workflow with JS injection pattern, poll loop with error handling, post-run wiki update step. |
 | 2026-05-21 | Created `llm-wiki` skill: Ingest/Query/Lint pattern for maintaining the knowledge base. After every run, skill updates wiki pages, ingest log, WIKI.md changelog, commits, and pushes. |
 | 2026-05-21 | Skills versioned in `skills/` directory alongside code. After each session the skill instructs: update wiki pages → append to ingest log → append to changelog → commit + push. |
+| 2026-05-21 | Jim Noir audit: compared Spotify liked songs against downloaded files. Found 1 missing track. Downloaded "Eanie Meany (Fatboy Slim Remix - radio edit)" via Qobuz GB (Amazon ASIN invalid; Qobuz US 404). Extracted from ZIP, tagged, lyrics added. All 8 Jim Noir liked tracks now complete. |
 | 2026-05-19 | Various Artists rule: albumartist "Various Artists" always replaced with track artist. |
 | 2026-05-19 | Artist grouping: artist_groups.json maps artists to shared ARTISTSORT/ALBUMARTISTSORT for iTunes grouping without changing display names. |
 | 2026-05-19 | Artist subfolders created only when batch has 2+ songs by the same artist. Single songs stay flat in Spotify downloads/. |

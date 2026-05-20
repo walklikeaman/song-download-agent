@@ -1,12 +1,22 @@
 # Jim Noir
 
-> Manchester-based indie pop / lo-fi artist. First session downloaded 7 tracks.
+> Manchester-based indie pop / lo-fi artist. All 8 liked tracks downloaded across two sessions.
 
-## Session: 2026-05-21
+## Session 2: 2026-05-21 (continuation)
+
+1 missing track discovered via Spotify liked-songs audit and downloaded. Source: Qobuz GB (only source that worked — Amazon ASIN invalid, Qobuz US 404). Downloaded as ZIP, extracted FLAC, run through tag_fixer.py.
+
+### Track downloaded (session 2)
+
+| Title | Source URL | File | Size | Notes |
+|---|---|---|---|---|
+| Eanie Meany (Fatboy Slim Remix - radio edit) | qobuz.com/gb-en/album/…/0825646361366 | 1. Jim Noir - Eanie Meany  (Fatboy Slim Remix - radio edit).flac | ~22 MB | ISRC GBAHS0600292, 2006, genre=Pop, lyrics found |
+
+## Session 1: 2026-05-21
 
 All 7 tracks downloaded as FLAC from Amazon Music via lucida.to. tag_fixer.py run on all 7.
 
-### Tracks downloaded
+### Tracks downloaded (session 1)
 
 | Title | ASIN | File | Size |
 |---|---|---|---|
@@ -22,14 +32,25 @@ All 7 tracks downloaded as FLAC from Amazon Music via lucida.to. tag_fixer.py ru
 
 `~/Downloads/Spotify downloads/Jim Noir/`
 
+### Destination
+
+`~/Downloads/Spotify downloads/Jim Noir/`
+
 ### Genre
 
-`Alternative` — seeded into `artist_genres.json` this session.
+`Alternative` (sessions 1 tracks) / `Pop` (Eanie Meany — from iTunes). Seeded into `artist_genres.json` at start of session 1.
 
 ### tag_fixer.py notes
 
-- All tracks processed successfully
-- Genre source: seeded manually into cache (iTunes returned "Alternative" category)
+- All 8 tracks processed successfully
+- Session 1: genre source = seeded manually into cache
+- Session 2 (Eanie Meany): genre=Pop from iTunes; lyrics found via lyrics.ovh; cover resized 1426→600px; single-file run → moved to parent `Spotify downloads/` then manually placed in `Jim Noir/`
+
+## Quirks
+
+- Eanie Meany ASIN (`B073LDGQQR`) was a purchase ASIN, not Amazon Music streaming — returned error from lucida.to
+- Qobuz US URL returned 404 from lucida.to; GB URL worked
+- Lucida downloaded as ZIP (single-track album); extracted with `unzip -j`
 
 ## Related
 
