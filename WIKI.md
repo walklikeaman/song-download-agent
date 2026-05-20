@@ -57,12 +57,13 @@ python3 tag_fixer.py ~/Downloads/Artist\ -\ Title.flac
 │  │  lucida.to (web UI) │────▶│  tag_fixer.py             │  │
 │  │                     │     │                           │  │
 │  │  Sources:           │     │  Metadata:                │  │
-│  │  • Amazon Music     │     │  iTunes API → Discogs     │  │
-│  │  • Qobuz (hi-res)   │     │                           │  │
-│  │  • Tidal            │     │  Lyrics:                  │  │
-│  │  • Deezer           │     │  LRCLib → lyrics.ovh →   │  │
-│  │  • Soundcloud       │     │  syncedlyrics → Genius →  │  │
-│  │  • Yandex Music     │     │  ChartLyrics → AZLyrics  │  │
+│  │  • Amazon Music     │     │  iTunes → Discogs         │  │
+│  │  • Qobuz (hi-res)   │     │  Genre: iTunes→MB→Wiki    │  │
+│  │  • Tidal            │     │                           │  │
+│  │  • Deezer           │     │  Lyrics:                  │  │
+│  │  • Soundcloud       │     │  LRCLib → lyrics.ovh →   │  │
+│  │  • Yandex Music     │     │  syncedlyrics → Genius →  │  │
+│  │                     │     │  ChartLyrics → AZLyrics  │  │
 │  │                     │     │                           │  │
 │  │  Output: .flac      │     │  Output: .flac (tagged)   │  │
 │  └─────────────────────┘     └───────────────────────────┘  │
@@ -272,12 +273,22 @@ ISRC → MusicBrainz (original date, authoritative)
 Sources tried in order until a non-empty value is found:
 
 ```
-existing tag → iTunes primaryGenreName → artist cache → MusicBrainz artist tags → ⚠ warn
+existing tag → iTunes primaryGenreName → artist cache → MusicBrainz artist tags → Wikipedia infobox → ⚠ warn
 ```
 
-- **Artist cache** (`artist_genres.json`) — once a genre is found for an artist, it is stored and reused for all future tracks by that artist without hitting any API. This guarantees consistency: every Radiohead track gets the same genre.
+| # | Source | How |
+|---|--------|-----|
+| 1 | **Existing tag** | Already present in the file — always wins |
+| 2 | **iTunes** | `primaryGenreName` from the track search result |
+| 3 | **Artist cache** | `artist_genres.json` — genre found in a previous run for this artist |
+| 4 | **MusicBrainz** | Live lookup — crowd-voted genre tags, top tag used |
+| 5 | **Wikipedia** | Parses the `| genre =` field from the artist's Wikipedia infobox |
+
+- **Artist cache** (`artist_genres.json`) — once a genre is found for an artist from any source, it is stored and reused for all future tracks by that artist without hitting any API. This guarantees consistency: every Radiohead track gets the same genre.
 - **MusicBrainz artist tags** — crowd-voted genre tags sorted by vote count; the top tag is used.
-- If all sources fail, a `⚠` warning is printed. The tag is left empty rather than guessing.
+- **Wikipedia infobox** — fallback when MusicBrainz has no tags. Searches `"{artist} musician"`, fetches the top result's wikitext, and parses the `| genre = [[Genre]]` template field. Handles both linked (`[[Pop music|Pop]]`) and plain text genres. No API key required.
+
+If all sources fail, a `⚠` warning is printed. The tag is left empty rather than guessing.
 
 ### Various Artists rule
 
@@ -540,6 +551,7 @@ Tags written by this agent (Vorbis Comment / FLAC format):
 | 2026-05-19 | Added album cover check: existing covers kept untouched; missing covers fetched from iTunes. All covers resized to ≤600×600 px via Pillow/LANCZOS. |
 | 2026-05-19 | All processed files automatically moved to ~/Downloads/Spotify downloads/ after tagging. |
 | 2026-05-19 | Genre enforcement: never blank. Chain: existing → iTunes → artist cache → MusicBrainz. Cache persists in artist_genres.json. |
+| 2026-05-21 | Genre enforcement extended: added Wikipedia infobox lookup as fallback after MusicBrainz. Searches `"{artist} musician"`, parses wikitext `\| genre =` field — no new dependencies (uses existing `requests`). |
 | 2026-05-19 | Various Artists rule: albumartist "Various Artists" always replaced with track artist. |
 | 2026-05-19 | Artist grouping: artist_groups.json maps artists to shared ARTISTSORT/ALBUMARTISTSORT for iTunes grouping without changing display names. |
 | 2026-05-19 | Artist subfolders created only when batch has 2+ songs by the same artist. Single songs stay flat in Spotify downloads/. |

@@ -12,6 +12,7 @@ What it does:
     2. Searches iTunes API (no auth needed) for the track
     3. Falls back to Discogs if iTunes has no result
     4. Fills in any missing tags: album, year, track number, album artist, genre
+       Genre pipeline: existing tag → iTunes → artist cache → MusicBrainz → Wikipedia
     5. Fetches plain-text lyrics — tries 8 sources in order until one hits:
          1. LRCLib       — keyless, 3M+ tracks, open-source
          2. lyrics.ovh   — keyless REST API
@@ -508,6 +509,65 @@ def mb_artist_genre(artist: str) -> str | None:
     return None
 
 
+def wikipedia_genre(artist: str) -> str | None:
+    """
+    Look up the artist's primary genre from their Wikipedia infobox.
+    Searches Wikipedia for '<artist> musician', fetches the top result's
+    wikitext, and parses the '| genre = ...' field.
+    Returns the first genre string found, or None.
+    """
+    try:
+        api = "https://en.wikipedia.org/w/api.php"
+
+        # Step 1: find the best article title
+        r = requests.get(api, params={
+            "action": "query", "list": "search",
+            "srsearch": f"{artist} musician",
+            "format": "json", "srlimit": 3,
+        }, headers={"User-Agent": USER_AGENT}, timeout=10)
+        if r.status_code != 200:
+            return None
+        hits = r.json().get("query", {}).get("search", [])
+        if not hits:
+            return None
+
+        # Step 2: fetch wikitext for the top result
+        page_title = hits[0]["title"]
+        r2 = requests.get(api, params={
+            "action": "query", "titles": page_title,
+            "prop": "revisions", "rvprop": "content",
+            "rvslots": "main", "format": "json",
+        }, headers={"User-Agent": USER_AGENT}, timeout=10)
+        if r2.status_code != 200:
+            return None
+
+        pages = r2.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            slots = page.get("revisions", [{}])[0].get("slots", {})
+            wikitext = slots.get("main", {}).get("*", "")
+            # Infobox field: | genre = [[Pop music|Pop]], [[Indie pop]]
+            m = re.search(r"\|\s*genre\s*=([^\n|{}]{1,200})", wikitext, re.IGNORECASE)
+            if not m:
+                continue
+            raw = m.group(1)
+            # Extract link text: [[Link|Display]] or [[Link]]
+            genres = re.findall(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]", raw)
+            # Also grab bare plain-text words (after stripping markup)
+            plain = re.sub(r"\[\[[^\]]+\]\]|<[^>]+>|'{2,}", "", raw)
+            for tok in re.split(r"[,\n]", plain):
+                tok = tok.strip()
+                if tok and not tok.startswith("{{"):
+                    genres.append(tok)
+            if genres:
+                # Clean up and return primary genre
+                g = genres[0].strip().rstrip("}")
+                if g:
+                    return g.title()
+    except Exception as e:
+        print(f"  Wikipedia genre error: {e}")
+    return None
+
+
 def ensure_genre(artist: str, current_genre: str, itunes_genre: str) -> tuple[str, str]:
     """
     Guarantee a non-blank genre. Tries (in order):
@@ -515,6 +575,7 @@ def ensure_genre(artist: str, current_genre: str, itunes_genre: str) -> tuple[st
       2. iTunes result         — from the search we already did
       3. artist cache          — genre seen for this artist before
       4. MusicBrainz artist    — live lookup
+      5. Wikipedia infobox     — genre field from artist's Wikipedia article
     Returns (genre_string, source_label). Updates _artist_genres cache in-place.
     """
     key = artist.lower()
@@ -537,6 +598,12 @@ def ensure_genre(artist: str, current_genre: str, itunes_genre: str) -> tuple[st
     if mb_genre:
         _artist_genres[key] = mb_genre
         return mb_genre, "musicbrainz"
+
+    print(f"  Genre       : MusicBrainz empty — querying Wikipedia")
+    wiki_genre = wikipedia_genre(artist)
+    if wiki_genre:
+        _artist_genres[key] = wiki_genre
+        return wiki_genre, "wikipedia"
 
     return "", "none"
 
