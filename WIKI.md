@@ -552,6 +552,10 @@ Tags written by this agent (Vorbis Comment / FLAC format):
 | 2026-05-19 | All processed files automatically moved to ~/Downloads/Spotify downloads/ after tagging. |
 | 2026-05-19 | Genre enforcement: never blank. Chain: existing → iTunes → artist cache → MusicBrainz. Cache persists in artist_genres.json. |
 | 2026-05-21 | Genre enforcement extended: added Wikipedia infobox lookup as fallback after MusicBrainz. Searches `"{artist} musician"`, parses wikitext `\| genre =` field — no new dependencies (uses existing `requests`). |
+| 2026-05-21 | Structured wiki created (Karpathy LLM-wiki pattern): flat WIKI.md converted to 17 individual pages in `wiki/` covering processes, concepts, entities, errors, and references. Wiki is the authoritative source; WIKI.md is the generated entry point. |
+| 2026-05-21 | Created `song-download` skill: full download workflow with JS injection pattern, poll loop with error handling, post-run wiki update step. |
+| 2026-05-21 | Created `llm-wiki` skill: Ingest/Query/Lint pattern for maintaining the knowledge base. After every run, skill updates wiki pages, ingest log, WIKI.md changelog, commits, and pushes. |
+| 2026-05-21 | Skills versioned in `skills/` directory alongside code. After each session the skill instructs: update wiki pages → append to ingest log → append to changelog → commit + push. |
 | 2026-05-19 | Various Artists rule: albumartist "Various Artists" always replaced with track artist. |
 | 2026-05-19 | Artist grouping: artist_groups.json maps artists to shared ARTISTSORT/ALBUMARTISTSORT for iTunes grouping without changing display names. |
 | 2026-05-19 | Artist subfolders created only when batch has 2+ songs by the same artist. Single songs stay flat in Spotify downloads/. |
