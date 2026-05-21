@@ -6,8 +6,9 @@
 
 | Page | What it covers |
 |---|---|
-| [download-a-track.md](download-a-track.md) | Full workflow: select source → lucida.to API → download → move file |
+| [download-a-track.md](download-a-track.md) | Full workflow: select source → lucida.to API → download → move → tag → Spotify sync |
 | [tag-fixer-pipeline.md](tag-fixer-pipeline.md) | All tag_fixer.py enrichment steps in order |
+| [spotify-sync.md](spotify-sync.md) | Add to New Music {year} playlist + remove from Liked Songs via Spotify Web API |
 | [token-renewal.md](token-renewal.md) | How to renew the lucida.to session token |
 
 ## Concept pages

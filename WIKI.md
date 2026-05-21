@@ -1,6 +1,6 @@
 # Song Download Agent — Wiki
 
-> A two-step pipeline for downloading hi-res audio and auto-enriching it with complete metadata and lyrics. No GUI required.
+> A four-step pipeline: download hi-res audio → enrich metadata/lyrics → sync Spotify → update wiki. No GUI required.
 
 ---
 
@@ -20,14 +20,15 @@
    - [Various Artists rule](#various-artists-rule)
    - [Artist grouping](#artist-grouping)
    - [Lyrics pipeline](#lyrics-pipeline)
-5. [Setup](#setup)
-6. [Usage](#usage)
-7. [Environment Variables](#environment-variables)
-8. [Config Files](#config-files)
-9. [Lyrics Sources — Full Chain](#lyrics-sources--full-chain)
-10. [Tag Reference](#tag-reference)
-11. [Known Limitations](#known-limitations)
-12. [Changelog](#changelog)
+5. [Step 3 — Spotify Sync](#step-3--spotify-sync)
+6. [Setup](#setup)
+7. [Usage](#usage)
+8. [Environment Variables](#environment-variables)
+9. [Config Files](#config-files)
+10. [Lyrics Sources — Full Chain](#lyrics-sources--full-chain)
+11. [Tag Reference](#tag-reference)
+12. [Known Limitations](#known-limitations)
+13. [Changelog](#changelog)
 
 ---
 
@@ -340,6 +341,65 @@ See [Lyrics Sources — Full Chain](#lyrics-sources--full-chain) for details on 
 
 ---
 
+## Step 3 — Spotify Sync
+
+After all tracks are tagged, add them to Spotify and clean up Liked Songs.
+
+**Rule:** Liked Songs = download queue. Once a track is saved as FLAC, it moves to the
+`New Music {YYYY}` playlist and is removed from Liked Songs.
+
+### Get a Spotify access token
+
+No credentials needed — extract from the already-logged-in web player:
+
+```javascript
+// Run in an open.spotify.com tab
+const {accessToken} = await fetch(
+  'https://open.spotify.com/get_access_token?reason=transport&productType=web_player'
+).then(r => r.json());
+window._spotifyToken = accessToken;
+```
+
+### Find the playlist, add tracks, remove from liked
+
+```javascript
+const T = window._spotifyToken;
+const year = new Date().getFullYear();
+
+// Find playlist
+const playlists = await fetch('https://api.spotify.com/v1/me/playlists?limit=50',
+  {headers: {Authorization: `Bearer ${T}`}}).then(r => r.json());
+const pl = playlists.items.find(p => p.name === `New Music ${year}`);
+
+// Search for each track to get its URI
+async function findUri(title, artist) {
+  const res = await fetch(
+    `https://api.spotify.com/v1/search?q=${encodeURIComponent(`track:${title} artist:${artist}`)}&type=track&limit=1`,
+    {headers: {Authorization: `Bearer ${T}`}}).then(r => r.json());
+  return res.tracks?.items?.[0]?.uri;
+}
+
+const uris = (await Promise.all(tracks.map(([t,a]) => findUri(t,a)))).filter(Boolean);
+
+// Add to playlist
+await fetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`, {
+  method: 'POST',
+  headers: {Authorization: `Bearer ${T}`, 'Content-Type': 'application/json'},
+  body: JSON.stringify({uris})
+});
+
+// Remove from Liked Songs
+await fetch('https://api.spotify.com/v1/me/tracks', {
+  method: 'DELETE',
+  headers: {Authorization: `Bearer ${T}`, 'Content-Type': 'application/json'},
+  body: JSON.stringify({ids: uris.map(u => u.split(':')[2])})
+});
+```
+
+See [wiki/spotify-sync.md](wiki/spotify-sync.md) for the full step-by-step with error handling.
+
+---
+
 ## Setup
 
 ### Install Python dependencies
@@ -557,6 +617,7 @@ Tags written by this agent (Vorbis Comment / FLAC format):
 | 2026-05-21 | Created `llm-wiki` skill: Ingest/Query/Lint pattern for maintaining the knowledge base. After every run, skill updates wiki pages, ingest log, WIKI.md changelog, commits, and pushes. |
 | 2026-05-21 | Skills versioned in `skills/` directory alongside code. After each session the skill instructs: update wiki pages → append to ingest log → append to changelog → commit + push. |
 | 2026-05-21 | Jim Noir audit: compared Spotify liked songs against downloaded files. Found 1 missing track. Downloaded "Eanie Meany (Fatboy Slim Remix - radio edit)" via Qobuz GB (Amazon ASIN invalid; Qobuz US 404). Extracted from ZIP, tagged, lyrics added. All 8 Jim Noir liked tracks now complete. |
+| 2026-05-21 | Added Spotify sync step (Step 3): after every download session, add tracks to "New Music {year}" playlist and remove from Liked Songs. Liked Songs is a download queue — not permanent storage. Added wiki/spotify-sync.md with full Spotify Web API implementation (get_access_token endpoint, search, playlist add, unlike). Updated skill, wiki index, download-a-track.md, WIKI.md. |
 | 2026-05-19 | Various Artists rule: albumartist "Various Artists" always replaced with track artist. |
 | 2026-05-19 | Artist grouping: artist_groups.json maps artists to shared ARTISTSORT/ALBUMARTISTSORT for iTunes grouping without changing display names. |
 | 2026-05-19 | Artist subfolders created only when batch has 2+ songs by the same artist. Single songs stay flat in Spotify downloads/. |

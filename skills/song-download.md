@@ -1,10 +1,9 @@
 ---
 name: song-download
 description: >
-  Download hi-res lossless audio (FLAC) from lucida.to using Amazon Music as the
-  source, then enrich the file's metadata and lyrics with tag_fixer.py.
-  After every run, automatically update the wiki (wiki/ pages + WIKI.md changelog)
-  and commit + push to GitHub so the knowledge base learns from each session.
+  Download hi-res lossless audio (FLAC) from lucida.to, enrich metadata and lyrics
+  with tag_fixer.py, then sync Spotify: add the tracks to the "New Music {year}"
+  playlist and remove them from Liked Songs. Finally update the wiki and commit.
   Use this skill whenever the user asks to download a song, album, or track —
   especially when they mention an artist name, song title, Spotify link, Amazon
   ASIN, or says things like "rip this", "get me this track", "download in FLAC",
@@ -14,10 +13,10 @@ description: >
 
 # Song Download Agent
 
-Three-step pipeline: **download via lucida.to** → **enrich tags + lyrics** → **update wiki + commit**.
+Four-step pipeline: **download via lucida.to** → **enrich tags + lyrics** → **sync Spotify** → **update wiki + commit**.
 
-The third step is not optional. Every run teaches the system: new artists, new errors, new
-patterns — all go into the wiki so the next run starts smarter.
+Steps 3 and 4 are not optional. Step 3 keeps Spotify tidy (playlist + unlike). Step 4 teaches
+the system so every future run starts smarter.
 
 ---
 
@@ -147,12 +146,104 @@ cover art, lyrics (6 sources), artist subfolder move.
 
 ---
 
-## Step 3 — Update wiki and commit  ← ALWAYS DO THIS
+## Step 3 — Spotify sync  ← ALWAYS DO THIS
+
+After all tracks are tagged, add them to the **"New Music {YYYY}"** playlist (where YYYY is the
+current year — e.g. "New Music 2026") and remove each one from Liked Songs.
+
+This keeps Liked Songs clean: it's used as a download queue, not a permanent library.
+New Music playlists are the permanent home.
+
+### 3a. Get a Spotify access token (no stored credentials needed)
+
+```javascript
+// Run in open.spotify.com tab
+const {accessToken} = await fetch(
+  'https://open.spotify.com/get_access_token?reason=transport&productType=web_player'
+).then(r => r.json());
+window._spotifyToken = accessToken;
+accessToken;
+```
+
+Navigate to `https://open.spotify.com` first if needed, then run this. The token lasts ~1 hour.
+
+### 3b. Find the "New Music {year}" playlist ID
+
+```javascript
+const year = new Date().getFullYear();          // e.g. 2026
+const T = window._spotifyToken;
+const playlists = await fetch(
+  'https://api.spotify.com/v1/me/playlists?limit=50',
+  {headers: {Authorization: `Bearer ${T}`}}
+).then(r => r.json());
+const pl = playlists.items.find(p => p.name === `New Music ${year}`);
+window._playlistId = pl?.id;
+pl?.name + ' → ' + pl?.id;
+```
+
+If the playlist doesn't exist yet, create it: `POST /v1/me/playlists` with `{name: "New Music 2026", public: false}`.
+
+### 3c. Find Spotify track IDs for each downloaded track
+
+```javascript
+// For each track, search by title + artist
+const T = window._spotifyToken;
+async function findTrackId(title, artist) {
+  const q = encodeURIComponent(`track:${title} artist:${artist}`);
+  const res = await fetch(
+    `https://api.spotify.com/v1/search?q=${q}&type=track&limit=3`,
+    {headers: {Authorization: `Bearer ${T}`}}
+  ).then(r => r.json());
+  return res.tracks?.items?.[0]?.uri;   // e.g. "spotify:track:XXXX"
+}
+
+// Build the list — substitute actual titles and artist
+const tracks = [
+  ["Track Title 1", "Artist Name"],
+  ["Track Title 2", "Artist Name"],
+  // ...
+];
+const uris = (await Promise.all(tracks.map(([t,a]) => findTrackId(t,a)))).filter(Boolean);
+window._trackUris = uris;
+uris;
+```
+
+### 3d. Add tracks to the playlist
+
+```javascript
+const T = window._spotifyToken;
+const playlistId = window._playlistId;
+// Spotify accepts max 100 URIs per call
+await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+  method: 'POST',
+  headers: {Authorization: `Bearer ${T}`, 'Content-Type': 'application/json'},
+  body: JSON.stringify({uris: window._trackUris})
+}).then(r => r.json());
+```
+
+### 3e. Remove tracks from Liked Songs
+
+```javascript
+const T = window._spotifyToken;
+const ids = window._trackUris.map(u => u.split(':')[2]);  // strip "spotify:track:"
+await fetch('https://api.spotify.com/v1/me/tracks', {
+  method: 'DELETE',
+  headers: {Authorization: `Bearer ${T}`, 'Content-Type': 'application/json'},
+  body: JSON.stringify({ids})
+}).then(r => r.json());
+```
+
+Verify in the Spotify app: check "New Music {year}" has the new tracks, check Liked Songs no
+longer contains them.
+
+---
+
+## Step 4 — Update wiki and commit  ← ALWAYS DO THIS
 
 This step is how the system learns. After every session — even one track — update the knowledge
 base so future runs start with more context.
 
-### 3a. Update wiki pages
+### 4a. Update wiki pages
 
 For each thing that happened this session, update the relevant page in
 `/Users/whofarted/Claude/Songs Download/wiki/`:
@@ -169,7 +260,7 @@ Cross-link aggressively. If a new artist page mentions the poll error fallback, 
 `error-poll-failed-to-fetch.md`. If a new error page describes a known Cloudflare variant,
 link to `cloudflare-behaviour.md`.
 
-### 3b. Add to the ingest log
+### 4b. Add to the ingest log
 
 Append a row to `wiki/_ingest_log.md`:
 
@@ -177,7 +268,7 @@ Append a row to `wiki/_ingest_log.md`:
 | YYYY-MM-DD | Session: {artist} download | {N} | {one-line summary of what happened and what was new} |
 ```
 
-### 3c. Add to the WIKI.md changelog
+### 4c. Add to the WIKI.md changelog
 
 Append to the changelog table at the bottom of `WIKI.md`:
 
@@ -185,7 +276,7 @@ Append to the changelog table at the bottom of `WIKI.md`:
 | YYYY-MM-DD | {What was done this session — new artist, new error encountered, new pattern discovered} |
 ```
 
-### 3d. Commit and push
+### 4d. Commit and push
 
 ```bash
 cd "/Users/whofarted/Claude/Songs Download"

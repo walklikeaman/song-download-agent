@@ -1,7 +1,7 @@
 # Download a Track
 
 > Full workflow for downloading a single track as a lossless FLAC using lucida.to + Amazon Music,
-> then enriching its metadata.
+> enriching its metadata, and syncing Spotify (add to New Music playlist → remove from Liked Songs).
 
 ## Prerequisites
 
@@ -110,6 +110,16 @@ python3 "/Users/whofarted/Claude/Songs Download/tag_fixer.py" \
 
 See [tag-fixer-pipeline.md](tag-fixer-pipeline.md) for what this does.
 
+## Step 7 — Spotify sync
+
+After all tracks are tagged, add them to the correct playlist and remove them from Liked Songs.
+
+See [spotify-sync.md](spotify-sync.md) for the full procedure.
+
+**Rule:** the playlist is always named `New Music {YYYY}` where YYYY is the year of the download
+session. Liked Songs is treated as a download queue — once a track is archived in FLAC it is
+removed from Liked Songs.
+
 ## Multiple tracks
 
 For albums or playlists: do **one track at a time**. After each `window.location.href` navigation
@@ -120,6 +130,7 @@ Pattern:
 2. Navigate browser back to `https://lucida.to`
 3. Repeat from Step 3 for next track
 4. After all tracks: run `tag_fixer.py` on the whole folder in one pass
+5. Run Spotify sync (Step 7) once for the whole batch
 
 ## Troubleshooting
 
@@ -136,7 +147,8 @@ Pattern:
 - [lucida-to-api.md](lucida-to-api.md) — API internals
 - [source-quality-guide.md](source-quality-guide.md) — when to prefer Qobuz over Amazon
 - [tag-fixer-pipeline.md](tag-fixer-pipeline.md) — enrichment step detail
+- [spotify-sync.md](spotify-sync.md) — playlist add + unlike step
 
 ## Sources
 
-- `raw/session-2026-05-21-jim-noir.md` — workflow validated across 7 Jim Noir tracks
+- `raw/session-2026-05-21-jim-noir.md` — workflow validated across 8 Jim Noir tracks
