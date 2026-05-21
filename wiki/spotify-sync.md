@@ -21,15 +21,56 @@ One playlist per year, regardless of how many sessions happen that year.
 
 ## Step 1 — Get a Spotify access token
 
-Navigate to `https://open.spotify.com` in the iMac Chrome tab, then run:
+> **Note (2026-05-21):** The `get_access_token` endpoint now returns `403 URL Blocked` (Cloudflare
+> WAF). Use the fetch-interceptor method below instead.
+
+### Method: fetch interceptor (current working approach)
+
+1. Navigate to `https://open.spotify.com/collection/tracks` in iMac Chrome  
+2. Install the interceptor via `javascript_tool`:
 
 ```javascript
-const {accessToken} = await fetch(
-  'https://open.spotify.com/get_access_token?reason=transport&productType=web_player'
-).then(r => r.json());
-window._spotifyToken = accessToken;
-accessToken;   // confirm it printed a long string
+const origFetch = window.fetch;
+window._origFetch = origFetch;
+window._capturedToken = null;
+window.fetch = function(...args) {
+  const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+  const opts = args[1] || {};
+  let auth = null;
+  try {
+    if (opts?.headers) {
+      if (typeof opts.headers.get === 'function') auth = opts.headers.get('Authorization');
+      else auth = opts.headers['Authorization'] || opts.headers['authorization'];
+    }
+    if (!auth && args[0] instanceof Request) auth = args[0].headers?.get('Authorization');
+  } catch(e) {}
+  if (auth && auth.startsWith('Bearer ') && (url.includes('spotify.com') || url.includes('spclient'))) {
+    window._capturedToken = auth.replace('Bearer ', '');
+    window._spotifyToken = window._capturedToken;
+  }
+  return origFetch.apply(this, args);
+};
+'interceptor installed'
 ```
+
+3. Trigger an SPA navigation to force API calls:
+
+```javascript
+window.history.pushState({}, '', '/album/3gr2zAgErmDyi3qDTxoh7b');
+window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+```
+
+4. Wait a moment, then check:
+
+```javascript
+window._capturedToken ? 'GOT TOKEN' : 'not yet — scroll the page and try again'
+```
+
+Once `window._spotifyToken` is set, proceed to Step 2.
+
+**Important:** Do not make repeated calls to `api.spotify.com` in a tight loop — the token is shared
+with the web player and hits a 429 rate limit quickly. Add 500–700ms delays between requests and
+run the full sync as a single async function rather than polling step-by-step.
 
 The token lasts ~1 hour. No stored credentials needed — the web player is already logged in.
 
@@ -147,11 +188,12 @@ Open the Spotify app:
 
 | Problem | Fix |
 |---|---|
+| `get_access_token` returns 403 | Cloudflare WAF blocks it — use fetch interceptor method (Step 1) |
 | Token fetch returns 401 | Not logged into open.spotify.com — sign in first |
 | Playlist not found | Check exact name spelling including capital N/M; or create it |
 | Track not found by search | Try without "(Remix…)" suffix; check artist spelling |
 | 403 on playlist add | Check you own the playlist (not a followed one) |
-| Rate limit 429 | Wait 30s and retry |
+| Rate limit 429 persists >30s | Each 429 response resets the timer. Stop ALL api.spotify.com calls for 70+ seconds, then fire a single async function that does everything with 500ms+ delays between calls. |
 
 ## Related
 

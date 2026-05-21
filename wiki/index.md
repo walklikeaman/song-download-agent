@@ -27,6 +27,8 @@
 | Page | What it covers |
 |---|---|
 | [artist-jim-noir.md](artist-jim-noir.md) | Session notes, ASINs, downloaded tracks, tag results |
+| [artist-neutral-milk-hotel.md](artist-neutral-milk-hotel.md) | Session notes, ASIN, downloaded track, tag results |
+| [artist-dreams-on-tape.md](artist-dreams-on-tape.md) | Session notes, ASINs, downloaded tracks, quirks (bad ASINs, CDN retries) |
 
 ## Error pages
 
