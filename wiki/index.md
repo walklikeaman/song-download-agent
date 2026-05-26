@@ -31,6 +31,7 @@
 | [artist-dreams-on-tape.md](artist-dreams-on-tape.md) | Session notes, ASINs, downloaded tracks, quirks (bad ASINs, CDN retries) |
 | [artist-glyders.md](artist-glyders.md) | Session notes, Qobuz track IDs, 2 tracks downloaded (not on Amazon Music) |
 | [artist-the-neville-brothers.md](artist-the-neville-brothers.md) | Session notes, ASIN, Voodoo downloaded (CD quality, 1989 catalogue) |
+| [artist-little-barrie.md](artist-little-barrie.md) | Session notes, ASINs, 3 tracks from Gravity Freeze (2026) |
 
 ## Error pages
 
