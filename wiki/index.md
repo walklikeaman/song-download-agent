@@ -34,6 +34,7 @@
 | [artist-little-barrie.md](artist-little-barrie.md) | Session notes, ASINs, 3 tracks from Gravity Freeze (2026) |
 | [artist-levitation-room.md](artist-levitation-room.md) | Session notes, ASIN, Equinox (Hi-Res 24/48, Equinox EP 2026); Spotify auto-playback quirk |
 | [artist-violet-grohl.md](artist-violet-grohl.md) | Session notes, ASINs, 3 tracks (Bug In The Cake, 595, THUM); CD quality |
+| [artist-paul-mccartney.md](artist-paul-mccartney.md) | Session notes, ASINs, 3 tracks from The Boys of Dungeon Lane (2026); standard vs deluxe edition ASINs; lucida uh-oh retry |
 
 ## Error pages
 
